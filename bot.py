@@ -266,6 +266,7 @@ class LayerEdge:
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
+                    data = json.dumps(self.generate_checkin_payload(account, address))
                     continue
                 
                 return self.print_message(address, proxy, Fore.RED, f"Check-In Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
@@ -308,6 +309,7 @@ class LayerEdge:
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
+                    data = json.dumps(self.generate_node_payload(account, address, "activation"))
                     continue
                 
                 return self.print_message(address, proxy, Fore.RED, f"Start Node Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
@@ -332,6 +334,7 @@ class LayerEdge:
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(5)
+                    data = json.dumps(self.generate_node_payload(account, address, "deactivation"))
                     continue
                 
                 return self.print_message(address, proxy, Fore.RED, f"Stop Node Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
@@ -468,6 +471,17 @@ class LayerEdge:
                 for account in accounts:
                     if account:
                         address = self.generate_address(account)
+                        if not address:
+                            self.log(
+                                f"{Fore.CYAN + Style.BRIGHT}[ Account: {Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT}{self.mask_account(account)}{Style.RESET_ALL}"
+                                f"{Fore.RED + Style.BRIGHT} GET Address Failed {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                f"{Fore.YELLOW + Style.BRIGHT} Check Your Private Key Fisrt {Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+                            )
+                            continue
+
                         tasks.append(self.process_accounts(account, address, use_proxy))
 
                 tasks.append(self.print_clear_message())

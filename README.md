@@ -37,8 +37,8 @@ Layer Edge BOT
 
 - **accounts.txt:** You will find the file `accounts.txt` inside the project directory. Make sure `accounts.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash
-    your_secret_key_1
-    your_secret_key_2
+    your_private_key_1
+    your_private_key_2
   ```
 - **proxy.txt:** You will find the `proxy.txt` file in the project directory. Make sure `proxy.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash
