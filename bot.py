@@ -174,7 +174,7 @@ class LayerEdge:
         while True:
             proxy = self.get_next_proxy_for_account(user_id) if use_proxy else None
             connector = ProxyConnector.from_url(proxy) if proxy else None
-            session = ClientSession(connector=connector, timeout=ClientTimeout(total=60))
+            session = ClientSession(connector=connector, timeout=ClientTimeout(total=120))
             try:
                 async with session.ws_connect(wss_url, headers=self.ws_headers) as wss:
                     
