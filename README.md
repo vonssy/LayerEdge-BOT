@@ -2,15 +2,15 @@
 Layer Edge BOT
 
 - Register Here : [Layer Edge](https://dashboard.layeredge.io/)
-- Use Code : tHc67a1g
+- Use Code `tHc67a1g`
 
 ## Features
 
   - Auto Get Account Information
-  - Auto Run With [Monosans](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt) Proxy - Choose 1
-  - Auto Run With Private Proxy - Choose 2
-  - Auto Run Without Proxy - Choose 3
-  - Auto Claim Daily Check-In
+  - Auto Run With [Monosans](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt) Proxy - `Choose 1`
+  - Auto Run With Private Proxy - `Choose 2`
+  - Auto Run Without Proxy - `Choose 3`
+  - Auto Rotate Invalid Proxies - `y` or `n`
   - Auto Connect and Reconnect Node
   - Multi Accounts With Threads
 
@@ -35,10 +35,10 @@ Layer Edge BOT
 
 ## Configuration
 
-- **accounts.txt:** You will find the file `accounts.txt` inside the project directory. Make sure `accounts.txt` contains data that matches the format expected by the script. Here are examples of file formats:
+- **tokens.txt:** You will find the file `tokens.txt` inside the project directory. Make sure `tokens.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash
-    your_private_key_1
-    your_private_key_2
+    your_edge_os_key_1
+    your_edge_os_key_2
   ```
 - **proxy.txt:** You will find the `proxy.txt` file in the project directory. Make sure `proxy.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash

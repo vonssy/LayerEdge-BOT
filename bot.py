@@ -1,28 +1,28 @@
 from aiohttp import (
-    ClientResponseError,
     ClientSession,
     ClientTimeout
 )
 from aiohttp_socks import ProxyConnector
-from eth_account import Account
-from eth_account.messages import encode_defunct
 from fake_useragent import FakeUserAgent
 from datetime import datetime
 from colorama import *
-import asyncio, time, json, os, pytz
+import asyncio, base64, time, json, os, pytz
 
 wib = pytz.timezone('Asia/Jakarta')
 
 class LayerEdge:
     def __init__(self) -> None:
-        self.headers = {
-            "Accept": "application/json, text/plain, */*",
+        self.ws_headers = {
             "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Origin": "https://dashboard.layeredge.io",
-            "Referer": "https://dashboard.layeredge.io/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
+            "Cache-Control": "no-cahce",
+            "Connection": "Upgrade",
+            "Host": "websocket.layeredge.io",
+            "Origin": "chrome-extension://fnjlbckpopjmpgkjgoiegmnnhahegbcb",
+            "Pragma": "no-cahce",
+            "Sec-Websocket-Extensions": "permessage-deflate; client_max_window_bits",
+            "Sec-Websocket-Key": "rzO6T9uMr4gMqpvvXN2+AQ==",
+            "Sec-Websocket-Version": "13",
+            "Upgrade": "websocket",
             "User-Agent": FakeUserAgent().random
         }
         self.proxies = []
@@ -42,7 +42,7 @@ class LayerEdge:
     def welcome(self):
         print(
             f"""
-        {Fore.GREEN + Style.BRIGHT}Auto Ping {Fore.BLUE + Style.BRIGHT}Layer Edge - BOT
+        {Fore.GREEN + Style.BRIGHT}Auto Ping {Fore.BLUE + Style.BRIGHT}edgenOS Light Node - BOT
             """
             f"""
         {Fore.GREEN + Style.BRIGHT}Rey? {Fore.YELLOW + Style.BRIGHT}<INI WATERMARK>
@@ -108,53 +108,22 @@ class LayerEdge:
         self.proxy_index = (self.proxy_index + 1) % len(self.proxies)
         return proxy
         
-    def generate_address(self, account: str):
+    def decode_ws_token(self, token: str):
         try:
-            account = Account.from_key(account)
-            address = account.address
+            header, payload, signature = token.split(".")
+            decoded_payload = base64.urlsafe_b64decode(payload + "==").decode("utf-8")
+            parsed_payload = json.loads(decoded_payload)
+            user_id = parsed_payload["sub"]
+            exp_time = parsed_payload["exp"]
             
-            return address
+            return user_id, exp_time
         except Exception as e:
             return None
         
-    def generate_checkin_payload(self, account: str, address: str):
-        timestamp = int(time.time() * 1000)
-        try:
-            message = f"I am claiming my daily node point for {address} at {timestamp}"
-            encoded_message = encode_defunct(text=message)
-
-            signed_message = Account.sign_message(encoded_message, private_key=account)
-            signature = signed_message.signature.hex()
-
-            data = {"sign":f"0x{signature}", "timestamp":timestamp, "walletAddress":address}
-            
-            return data
-        except Exception as e:
-            return None
-    
-    def generate_node_payload(self, account: str, address: str, msg_type: str):
-        timestamp = int(time.time() * 1000)
-        try:
-            message = f"Node {msg_type} request for {address} at {timestamp}"
-            encoded_message = encode_defunct(text=message)
-
-            signed_message = Account.sign_message(encoded_message, private_key=account)
-            signature = signed_message.signature.hex()
-
-            data = {"sign":f"0x{signature}", "timestamp":timestamp}
-            
-            return data
-        except Exception as e:
-            return None
-    
-    def mask_account(self, account):
-        mask_account = account[:6] + '*' * 6 + account[-6:]
-        return mask_account
-    
-    def print_message(self, address, proxy, color, message):
+    def print_message(self, user_id, proxy, color, message):
         self.log(
-            f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
-            f"{Fore.WHITE + Style.BRIGHT} {self.mask_account(address)} {Style.RESET_ALL}"
+            f"{Fore.CYAN + Style.BRIGHT}[ User Id:{Style.RESET_ALL}"
+            f"{Fore.WHITE + Style.BRIGHT} {user_id} {Style.RESET_ALL}"
             f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
             f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
@@ -163,25 +132,14 @@ class LayerEdge:
             f"{color + Style.BRIGHT} {message} {Style.RESET_ALL}"
             f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
         )
-    
-    async def print_clear_message(self):
-        while True:
-            await asyncio.sleep(60)
-            print(
-                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-                f"{Fore.BLUE + Style.BRIGHT}All Accounts Have Been Processed Successfully. Wait For Next Cycle...{Style.RESET_ALL}",
-                end="\r",
-                flush=True
-            )
 
     def print_question(self):
         while True:
             try:
-                print("1. Run With Monosans Proxy")
-                print("2. Run With Private Proxy")
-                print("3. Run Without Proxy")
-                choose = int(input("Choose [1/2/3] -> ").strip())
+                print(f"{Fore.WHITE + Style.BRIGHT}1. Run With Monosans Proxy{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}2. Run With Private Proxy{Style.RESET_ALL}")
+                print(f"{Fore.WHITE + Style.BRIGHT}3. Run Without Proxy{Style.RESET_ALL}")
+                choose = int(input(f"{Fore.BLUE + Style.BRIGHT}Choose [1/2/3] -> {Style.RESET_ALL}").strip())
 
                 if choose in [1, 2, 3]:
                     proxy_type = (
@@ -190,303 +148,141 @@ class LayerEdge:
                         "Run Without Proxy"
                     )
                     print(f"{Fore.GREEN + Style.BRIGHT}{proxy_type} Selected.{Style.RESET_ALL}")
-                    return choose
+                    break
                 else:
                     print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2 or 3.{Style.RESET_ALL}")
             except ValueError:
                 print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2 or 3).{Style.RESET_ALL}")
 
-    async def user_data(self, address: str, proxy=None, retries=5):
-        url = f"https://referralapi.layeredge.io/api/referral/wallet-details/{address}"
+        rotate = False
+        if choose in [1, 2]:
+            while True:
+                rotate = input(f"{Fore.BLUE + Style.BRIGHT}Rotate Invalid Proxy? [y/n] -> {Style.RESET_ALL}").strip()
 
-        await asyncio.sleep(3)
-        for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.get(url=url, headers=self.headers) as response:
-                        if response.status == 404:
-                            await self.user_confirm(address, proxy)
-                            continue
-
-                        response.raise_for_status()
-                        result = await response.json()
-                        return result['data']
-            except (Exception, ClientResponseError) as e:
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)
-                    continue
-                
-                return self.print_message(self.mask_account(address), proxy, Fore.RED, f"GET User Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
-    
-    async def user_confirm(self, address: str, proxy=None, retries=5):
-        url = "https://referralapi.layeredge.io/api/referral/register-wallet/tHc67a1g"
-        data = json.dumps({"walletAddress":address})
-        headers = {
-            **self.headers,
-            "Content-Length": str(len(data)),
-            "Content-Type": "application/json"
-        }
-
-        await asyncio.sleep(3)
-        for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
-                        response.raise_for_status()
-                        return await response.json()
-            except (Exception, ClientResponseError) as e:
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)
-                    continue
-                
-                return self.print_message(address, proxy, Fore.RED, f"Try Confirm Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
-            
-    async def daily_checkin(self, account: str, address: str, proxy=None, retries=5):
-        url = "https://referralapi.layeredge.io/api/light-node/claim-node-points"
-        data = json.dumps(self.generate_checkin_payload(account, address))
-        headers = {
-            **self.headers,
-            "Content-Length": str(len(data)),
-            "Content-Type": "application/json"
-        }
-
-        await asyncio.sleep(3)
-        for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
-                        if response.status == 405:
-                            return self.print_message(address, proxy, Fore.YELLOW, "Already Check-In Today")
-                        
-                        response.raise_for_status()
-                        return await response.json()
-            except (Exception, ClientResponseError) as e:
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)
-                    data = json.dumps(self.generate_checkin_payload(account, address))
-                    continue
-                
-                return self.print_message(address, proxy, Fore.RED, f"Check-In Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
-        
-    async def node_status(self, address: str, proxy=None, retries=5):
-        url = f"https://referralapi.layeredge.io/api/light-node/node-status/{address}"
-
-        await asyncio.sleep(3)
-        for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
-                    async with session.get(url=url, headers=self.headers) as response:
-                        response.raise_for_status()
-                        return await response.json()
-            except (Exception, ClientResponseError) as e:
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)
-                    continue
-                
-                return self.print_message(address, proxy, Fore.RED, f"GET Node Status Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
-        
-    async def start_node(self, account: str, address: str, proxy=None, retries=5):
-        url = f"https://referralapi.layeredge.io/api/light-node/node-action/{address}/start"
-        data = json.dumps(self.generate_node_payload(account, address, "activation"))
-        headers = {
-            **self.headers,
-            "Content-Length": str(len(data)),
-            "Content-Type": "application/json"
-        }
-
-        await asyncio.sleep(3)
-        for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
-                        response.raise_for_status()
-                        return await response.json()
-            except (Exception, ClientResponseError) as e:
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)
-                    data = json.dumps(self.generate_node_payload(account, address, "activation"))
-                    continue
-                
-                return self.print_message(address, proxy, Fore.RED, f"Start Node Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
-    
-    async def stop_node(self, account: str, address: str, proxy=None, retries=5):
-        url = f"https://referralapi.layeredge.io/api/light-node/node-action/{address}/stop"
-        data = json.dumps(self.generate_node_payload(account, address, "deactivation"))
-        headers = {
-            **self.headers,
-            "Content-Length": str(len(data)),
-            "Content-Type": "application/json"
-        }
-
-        await asyncio.sleep(3)
-        for attempt in range(retries):
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
-                    async with session.post(url=url, headers=headers, data=data) as response:
-                        response.raise_for_status()
-                        return await response.json()
-            except (Exception, ClientResponseError) as e:
-                if attempt < retries - 1:
-                    await asyncio.sleep(5)
-                    data = json.dumps(self.generate_node_payload(account, address, "deactivation"))
-                    continue
-                
-                return self.print_message(address, proxy, Fore.RED, f"Stop Node Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
-        
-    async def process_user_earning(self, address: str, use_proxy: bool):
-        while True:
-            await asyncio.sleep(24 * 60 * 60)
-
-            proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-
-            balance = "N/A"
-            user = await self.user_data(address, proxy)
-            if user:
-                balance = user.get("nodePoints")
-
-            self.print_message(address, proxy, Fore.WHITE, f"Earning {balance} PTS")
-        
-    async def process_claim_checkin(self, account: str, address: str, use_proxy: bool):
-        while True:
-            proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-
-            check_in = await self.daily_checkin(account, address, proxy)
-            if check_in and check_in.get("message") == "node points claimed successfully":
-                self.print_message(address, proxy, Fore.GREEN, "Check-In Success")
-
-            await asyncio.sleep(12 * 60 * 60)
-        
-    async def process_perform_node(self, account: str, address: str, use_proxy: bool):
-        while True:
-            proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-
-            reconnect_time = 10 * 60
-
-            node = await self.node_status(address, proxy)
-            if node and node.get("message") == "node status":
-                last_connect = node['data']['startTimestamp']
-
-                if last_connect is None:
-                    start = await self.start_node(account, address, proxy)
-                    if start and start.get("message") == "node action executed successfully":
-                        last_connect = start['data']['startTimestamp']
-                        now_time = int(time.time())
-                        reconnect_time = last_connect + 86400 - now_time
-
-                        self.print_message(address, proxy, Fore.GREEN, 
-                            f"Node Is Connected "
-                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} Reconnect After: {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{self.format_seconds(reconnect_time)}{Style.RESET_ALL}"
-                        )
-                        
+                if rotate in ["y", "n"]:
+                    rotate = rotate == "y"
+                    break
                 else:
-                    now_time = int(time.time())
-                    connect_time = last_connect + 86400
+                    print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter 'y' or 'n'.{Style.RESET_ALL}")
 
-                    if now_time >= connect_time:
-                        stop = await self.stop_node(account, address, proxy)
-                        if stop and stop.get("message") == "node action executed successfully":
-                            self.print_message(address, proxy, Fore.GREEN, 
-                                f"Node Disconnected"
-                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.BLUE + Style.BRIGHT}Reconnecting...{Style.RESET_ALL}"
-                            )
-                            await asyncio.sleep(3)
+        return choose, rotate
+    
+    async def connect_websocket(self, token: str, user_id: str, use_proxy: bool, rotate_proxy: bool):
+        wss_url = f"wss://websocket.layeredge.io/ws/node?token={token}"
+        connected = False
 
-                            start = await self.start_node(account, address, proxy)
-                            if start and start.get("message") == "node action executed successfully":
-                                last_connect = start['data']['startTimestamp']
-                                now_time = int(time.time())
-                                reconnect_time = last_connect + 86400 - now_time
+        while True:
+            proxy = self.get_next_proxy_for_account(user_id) if use_proxy else None
+            connector = ProxyConnector.from_url(proxy) if proxy else None
+            session = ClientSession(connector=connector, timeout=ClientTimeout(total=60))
+            try:
+                async with session.ws_connect(wss_url, headers=self.ws_headers) as wss:
+                    
+                    async def send_heartbeat_message():
+                        while True:
+                            await asyncio.sleep(25)
+                            await wss.send_json({"type":"Heartbeat"})
+                            self.print_message(user_id, proxy, Fore.BLUE, "Heartbeat Sent")
 
-                                self.print_message(address, proxy, Fore.GREEN, 
-                                    f"Node Is Connected "
+                    if not connected:
+                        await wss.send_json({"type":"NodeStart"})
+                        self.print_message(user_id, proxy, Fore.GREEN, "Node Started Successfully")
+                        connected = True
+                        send_ping = asyncio.create_task(send_heartbeat_message())
+
+                    while connected:
+                        try:
+                            response = await wss.receive_json()
+                            if response.get("type") == "PointsUpdate":
+                                start_time = response.get("data", {}).get("start_time", 0)
+                                total_points = response.get("data", {}).get("total_points", 0)
+                                total_boost_points = response.get("data", {}).get("total_boost_points", 0)
+                                self.print_message(
+                                    user_id, proxy, Fore.GREEN, "Points Updated "
                                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                    f"{Fore.CYAN + Style.BRIGHT} Reconnect After: {Style.RESET_ALL}"
-                                    f"{Fore.WHITE + Style.BRIGHT}{self.format_seconds(reconnect_time)}{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} Start Time: {Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT}{start_time}{Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT}Total Points:{Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT} {total_points} PTS {Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} Total Boost Points: {Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT}{total_boost_points} PTS{Style.RESET_ALL}"
                                 )
 
-                    else:
-                        reconnect_time = connect_time - now_time
-                        self.print_message(address, proxy, Fore.YELLOW, 
-                            f"Node Is Already Connected "
-                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} Reconnect After: {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{self.format_seconds(reconnect_time)}{Style.RESET_ALL}"
-                        )
+                            elif response.get("type") == "heartbeat_ack":
+                                self.print_message(user_id, proxy, Fore.GREEN, "Heartbeat Ack")
 
-            await asyncio.sleep(reconnect_time)
-            
-    async def process_accounts(self, account: str, address: str, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(address) if use_proxy else None
-        user = None
-        while user is None:
-            user = await self.user_data(address, proxy)
-            if not user:
-                proxy = self.rotate_proxy_for_account(address) if use_proxy else None
-                continue
+                        except Exception as e:
+                            self.print_message(user_id, proxy, Fore.YELLOW, f"Websocket Connection Closed: {Fore.RED + Style.BRIGHT}{str(e)}")
+                            if send_ping:
+                                send_ping.cancel()
+                                try:
+                                    await send_ping
+                                except asyncio.CancelledError:
+                                    self.print_message(user_id, proxy, Fore.YELLOW, f"Send Heartbeat Cancelled")
 
-            balance = user.get("nodePoints", "N/A")
-            self.print_message(address, proxy, Fore.WHITE, f"Earning {balance} PTS")
+                            await asyncio.sleep(5)
+                            connected = False
+                            break
 
-            tasks = []
-            tasks.append(self.process_user_earning(address, use_proxy))
-            tasks.append(self.process_claim_checkin(account, address, use_proxy))
-            tasks.append(self.process_perform_node(account, address, use_proxy))
-            await asyncio.gather(*tasks)
+            except Exception as e:
+                self.print_message(user_id, proxy, Fore.RED, f"Websocket Not Connected: {Fore.YELLOW + Style.BRIGHT}{str(e)}")
+                if rotate_proxy:
+                    proxy = self.rotate_proxy_for_account(user_id)
+                await asyncio.sleep(5)
+
+            except asyncio.CancelledError:
+                self.print_message(user_id, proxy, Fore.YELLOW, "Websocket Closed")
+                break
+            finally:
+                await session.close()
 
     async def main(self):
         try:
-            with open('accounts.txt', 'r') as file:
-                accounts = [line.strip() for line in file if line.strip()]
+            with open('tokens.txt', 'r') as file:
+                tokens = [line.strip() for line in file if line.strip()]
 
-            use_proxy_choice = self.print_question()
+            use_proxy_choice, rotate_proxy = self.print_question()
 
             use_proxy = False
             if use_proxy_choice in [1, 2]:
                 use_proxy = True
 
-            
             self.clear_terminal()
             self.welcome()
             self.log(
                 f"{Fore.GREEN + Style.BRIGHT}Account's Total: {Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT}{len(accounts)}{Style.RESET_ALL}"
+                f"{Fore.WHITE + Style.BRIGHT}{len(tokens)}{Style.RESET_ALL}"
             )
 
             if use_proxy:
                 await self.load_proxies(use_proxy_choice)
 
-            self.log(f"{Fore.CYAN + Style.BRIGHT}-{Style.RESET_ALL}"*75)
+            self.log(f"{Fore.CYAN + Style.BRIGHT}={Style.RESET_ALL}"*75)
 
-            while True:
-                tasks = []
-                for account in accounts:
-                    if account:
-                        address = self.generate_address(account)
-                        if not address:
-                            self.log(
-                                f"{Fore.CYAN + Style.BRIGHT}[ Account: {Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT}{self.mask_account(account)}{Style.RESET_ALL}"
-                                f"{Fore.RED + Style.BRIGHT} GET Address Failed {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                f"{Fore.YELLOW + Style.BRIGHT} Check Your Private Key Fisrt {Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                            )
-                            continue
+            tasks = []
+            for token in tokens:
+                if token:
+                    user_id, exp_time = self.decode_ws_token(token)
 
-                        tasks.append(self.process_accounts(account, address, use_proxy))
+                    if not user_id or not exp_time:
+                        continue
 
-                tasks.append(self.print_clear_message())
-                await asyncio.gather(*tasks)
-                await asyncio.sleep(10)
+                    if int(time.time()) > exp_time:
+                        self.log(
+                            f"{Fore.CYAN + Style.BRIGHT}[ User Id:{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} {user_id} {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Status: {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}EdgeOS Key Already Expired{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                        )
+                        continue
+
+                    tasks.append(asyncio.create_task(self.connect_websocket(token, user_id, use_proxy, rotate_proxy)))
+
+            await asyncio.gather(*tasks)
 
         except FileNotFoundError:
             self.log(f"{Fore.RED}File 'accounts.txt' Not Found.{Style.RESET_ALL}")
@@ -502,5 +298,5 @@ if __name__ == "__main__":
         print(
             f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-            f"{Fore.RED + Style.BRIGHT}[ EXIT ] Layer Edge - BOT{Style.RESET_ALL}                                       "                              
+            f"{Fore.RED + Style.BRIGHT}[ EXIT ] edgenOS Light Node - BOT{Style.RESET_ALL}                                       "                              
         )
